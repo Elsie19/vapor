@@ -38,7 +38,7 @@ pub enum ModError {
     #[error("decompression issue: `{0}`")]
     ZipArchive(#[from] zip::result::ZipError),
     #[error(
-        "files from `{incoming}` are attempting to write to `{file_listing}`", file_listing = .files.iter().map(|(owned, file)| format!("{owned} | {file}")).collect::<Vec<_>>().join("\n")
+        "files from `{incoming}` are attempting to write to:\n{file_listing}", file_listing = .files.iter().map(|(owned, file)| format!("{owned} | {file}")).collect::<Vec<_>>().join("\n")
     )]
     DoubleOwnedFiles {
         incoming: String,
