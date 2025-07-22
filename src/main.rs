@@ -76,6 +76,21 @@ fn main() -> anyhow::Result<()> {
             handler.move_mod(&name, Move::Enable)?;
             println!(":: Enabled `{name}`");
         }
+        Command::List { name } => {
+            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
+            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+
+            let toml = ModHandler::new(config.main.path.into()).load_toml()?;
+
+            if let Some(mod_name) = toml.mods.get(&name) {
+                for file in &mod_name.files {
+                    println!("{file}");
+                }
+            } else {
+                eprintln!("No mod named `{name}` found");
+                std::process::exit(1);
+            }
+        }
     };
 
     Ok(())

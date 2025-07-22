@@ -43,4 +43,28 @@ impl ModRegistry {
 
         broken_deps
     }
+
+    /// Check if paths are owned by another mod already.
+    ///
+    /// Returns a [`Vec`] with the tuple `(owned_mod_name, path)`.
+    pub fn crossover_paths<I, T, S>(&self, mod_name: S, paths: I) -> Vec<(String, String)>
+    where
+        I: IntoIterator<Item = T>,
+        T: Into<String>,
+        S: AsRef<str>,
+    {
+        let mod_name = mod_name.as_ref();
+        let mut overlaps = vec![];
+        let incoming = paths.into_iter().map(Into::into).collect::<Vec<_>>();
+
+        for path in incoming {
+            for (name, mod_entry) in &self.mods {
+                if mod_entry.files.iter().any(|f| f == &path) && *name != mod_name {
+                    overlaps.push((name.to_owned(), path.clone()));
+                }
+            }
+        }
+
+        overlaps
+    }
 }

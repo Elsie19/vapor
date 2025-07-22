@@ -41,4 +41,9 @@ pub enum Command {
         /// Mod name.
         name: String,
     },
+    /// List a mod's files.
+    List {
+        /// Mod name.
+        name: String,
+    },
 }

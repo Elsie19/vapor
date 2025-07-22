@@ -37,6 +37,13 @@ pub enum ModError {
     MissingMod(String),
     #[error("decompression issue: `{0}`")]
     ZipArchive(#[from] zip::result::ZipError),
+    #[error(
+        "files from `{incoming}` are attempting to write to `{file_listing}`", file_listing = .files.iter().map(|(owned, file)| format!("{owned} | {file}")).collect::<Vec<_>>().join("\n")
+    )]
+    DoubleOwnedFiles {
+        incoming: String,
+        files: Vec<(String, String)>,
+    },
 }
 
 pub struct ModHandler {
@@ -65,6 +72,16 @@ impl ModHandler {
         let mut toml = self.load_toml()?;
 
         let mut archive = ZipArchive::new(File::open(path)?).expect("Could not read zip file");
+
+        let files = read_files(path);
+
+        let crossed_paths = toml.crossover_paths(&name, files);
+        if !crossed_paths.is_empty() {
+            return Err(ModError::DoubleOwnedFiles {
+                incoming: name,
+                files: crossed_paths,
+            });
+        }
 
         archive.extract_unwrapped_root_dir(self.root.clone(), root_dir_common_filter)?;
 
