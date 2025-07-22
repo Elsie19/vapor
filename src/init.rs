@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fs::File,
+    fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
 };
@@ -34,14 +34,14 @@ struct LibraryEntry {
 }
 
 #[derive(Serialize, Deserialize)]
-struct CyberToml {
-    main: MainToml,
+pub struct CyberToml {
+    pub main: MainToml,
 }
 
 #[derive(Serialize, Deserialize)]
-struct MainToml {
-    path: String,
-    created: DateTime<Utc>,
+pub struct MainToml {
+    pub path: String,
+    pub created: DateTime<Utc>,
 }
 
 pub struct Init {
@@ -116,7 +116,7 @@ impl Init {
         let xdg_dirs = xdg::BaseDirectories::with_prefix("cyber");
         let config_path = xdg_dirs.place_config_file("Cyber.toml")?;
 
-        let mut config_file = File::create(config_path)?;
+        let mut config_file = File::create_new(config_path)?;
 
         write!(
             &mut config_file,
@@ -129,6 +129,17 @@ impl Init {
             })
             .expect("Could not serialize")
         )?;
+
+        File::create_new(self.path.join("mods.toml"))?;
+
+        fs::create_dir(self.path.join("Disabled Mods"))?;
+
         Ok(())
+    }
+
+    pub fn get_config() -> Option<PathBuf> {
+        let xdg_dirs = xdg::BaseDirectories::with_prefix("cyber");
+
+        xdg_dirs.get_config_file("Cyber.toml")
     }
 }

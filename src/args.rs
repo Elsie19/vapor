@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::{Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -12,4 +14,12 @@ pub enum Command {
     Init,
     /// Get status of mods.
     Status,
+    /// Add a mod.
+    Add {
+        file: PathBuf,
+        #[arg(short, long)]
+        name: String,
+        #[arg(short, long)]
+        version: String,
+    },
 }

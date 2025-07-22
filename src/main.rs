@@ -1,6 +1,10 @@
+use std::fs;
+
+use anyhow::anyhow;
 use args::{Command, CyberArgs};
 use clap::Parser;
-use init::Init;
+use init::{CyberToml, Init};
+use mod_manager::{handler::ModHandler, mod_file_formats::read_files};
 
 mod args;
 mod init;
@@ -16,6 +20,17 @@ fn main() -> anyhow::Result<()> {
         }
         Command::Status => {
             println!("Doing ok");
+        }
+        Command::Add {
+            file,
+            name,
+            version,
+        } => {
+            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
+            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+            let handler = ModHandler::new(config.main.path.into());
+
+            handler.add_mod(&file, name, version)?;
         }
     };
 

@@ -5,10 +5,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ModRegistry {
+    #[serde(default)]
     pub mods: HashMap<String, ModEntry>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct ModEntry {
     pub version: String,
     pub file: String,
