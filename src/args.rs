@@ -18,12 +18,18 @@ pub enum Command {
     Add {
         /// Path to mod archive.
         file: PathBuf,
+
         /// Name of mod.
         #[arg(short, long)]
         name: String,
+
         /// Mod version.
         #[arg(short, long)]
         version: String,
+
+        /// Dependencies.
+        #[arg(short, long)]
+        dependencies: Vec<String>,
     },
     /// Disable a mod.
     Disable {

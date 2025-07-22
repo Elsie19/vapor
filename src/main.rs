@@ -2,6 +2,8 @@ use std::fs;
 
 use anyhow::anyhow;
 use args::{Command, CyberArgs};
+use chrono::Utc;
+use chrono_humanize::HumanTime;
 use clap::Parser;
 use init::{CyberToml, Init};
 use mod_manager::handler::{ModHandler, Move};
@@ -19,18 +21,40 @@ fn main() -> anyhow::Result<()> {
             cyber_directory.setup_cyber()?;
         }
         Command::Status => {
-            println!("Doing ok");
+            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
+            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+            let toml = ModHandler::new(config.main.path.into()).load_toml()?;
+
+            for (mod_name, contents) in &toml.mods {
+                println!("* Name: `{mod_name}`");
+                println!("  - Enabled: {}", contents.installed);
+                println!("  - Version: {}", contents.version);
+                if let Some(installed_at) = contents.installed_at {
+                    println!(
+                        "  - Installed: {}",
+                        HumanTime::from(installed_at - Utc::now())
+                    );
+                }
+                let deps = toml.satisfied_deps(mod_name);
+                if !deps.is_empty() {
+                    println!("  - Missing dependencies:");
+                    for dep in deps {
+                        println!("      > `{dep}`");
+                    }
+                }
+            }
         }
         Command::Add {
             file,
             name,
             version,
+            dependencies,
         } => {
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
             let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
             let handler = ModHandler::new(config.main.path.into());
 
-            handler.add_mod(&file, name, version)?;
+            handler.add_mod(&file, name, version, &dependencies)?;
         }
         Command::Disable { name } => {
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;

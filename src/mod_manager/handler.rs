@@ -57,6 +57,7 @@ impl ModHandler {
         path: &Path,
         name: S,
         version: S,
+        dependencies: &[String],
     ) -> Result<(), ModError> {
         let name = name.into();
         let version = version.into();
@@ -74,7 +75,11 @@ impl ModHandler {
                 file: path.to_string_lossy().to_string(),
                 installed: true,
                 installed_at: Some(Utc::now()),
-                dependencies: None,
+                dependencies: if dependencies.is_empty() {
+                    None
+                } else {
+                    Some(dependencies.to_vec())
+                },
                 files: read_files(path),
             },
         );
@@ -141,7 +146,7 @@ impl ModHandler {
         Ok(())
     }
 
-    fn load_toml(&self) -> Result<ModRegistry, ModError> {
+    pub fn load_toml(&self) -> Result<ModRegistry, ModError> {
         let toml_string = fs::read_to_string(&self.toml)?;
 
         Ok(toml::from_str(&toml_string)?)

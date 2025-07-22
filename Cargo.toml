@@ -7,6 +7,7 @@ description = "Cyberpunk 2077 mod manager"
 [dependencies]
 anyhow = "1.0.98"
 chrono = { version = "0.4.41", features = ["serde"] }
+chrono-humanize = "0.2.3"
 clap = { version = "4.5.40", features = ["derive"] }
 demand = "1.7.0"
 keyvalues-serde = "0.2.2"
