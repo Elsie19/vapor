@@ -1,12 +1,13 @@
 use std::{
+    ffi::OsStr,
     fs::{self, File, OpenOptions},
     io::Write,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use chrono::Utc;
 use thiserror::Error;
-use zip::{ZipArchive, read::root_dir_common_filter};
+use zip::ZipArchive;
 
 use super::{
     mod_file_formats::read_files,
@@ -83,7 +84,7 @@ impl ModHandler {
             });
         }
 
-        archive.extract_unwrapped_root_dir(self.root.clone(), root_dir_common_filter)?;
+        archive.extract_unwrapped_root_dir(self.root.clone(), Self::root_dir_common_filter)?;
 
         toml.mods.insert(
             name,
@@ -183,5 +184,20 @@ impl ModHandler {
                 break;
             }
         }
+    }
+
+    fn root_dir_common_filter(path: &Path) -> bool {
+        const VALID_ROOT_DIRS: &[&str] = &["r6", "archive", "bin", "red4ext", "engine"];
+
+        // Accept only if it's exactly one of the valid root dir names
+        if path.components().count() == 1 {
+            if let Some(dir_name) = path.file_name() {
+                return VALID_ROOT_DIRS
+                    .iter()
+                    .any(|&valid| OsStr::new(valid) == dir_name);
+            }
+        }
+
+        false
     }
 }
