@@ -16,10 +16,23 @@ pub enum Command {
     Status,
     /// Add a mod.
     Add {
+        /// Path to mod archive.
         file: PathBuf,
+        /// Name of mod.
         #[arg(short, long)]
         name: String,
+        /// Mod version.
         #[arg(short, long)]
         version: String,
+    },
+    /// Disable a mod.
+    Disable {
+        /// Mod name.
+        name: String,
+    },
+    /// Enable a mod.
+    Enable {
+        /// Mod name.
+        name: String,
     },
 }

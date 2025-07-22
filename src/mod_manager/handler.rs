@@ -99,6 +99,10 @@ impl ModHandler {
 
         let installed = move_where.installed();
 
+        if entry.installed == installed {
+            return Err(ModError::MissingMod(name));
+        }
+
         let old_root = match move_where {
             Move::Enable => self.root.join("Disabled Mods"),
             Move::Disable => self.root.clone(),
@@ -118,6 +122,10 @@ impl ModHandler {
             }
 
             fs::rename(&from, &to)?;
+
+            if let Some(parent) = from.parent() {
+                Self::clean_upwards(parent, &old_root);
+            }
         }
 
         entry.installed = installed;
@@ -137,5 +145,21 @@ impl ModHandler {
         let toml_string = fs::read_to_string(&self.toml)?;
 
         Ok(toml::from_str(&toml_string)?)
+    }
+
+    fn clean_upwards(start: &Path, stop: &Path) {
+        let mut dir = start;
+
+        while dir != stop {
+            if fs::remove_dir(dir).is_err() {
+                break;
+            }
+
+            if let Some(parent) = dir.parent() {
+                dir = parent;
+            } else {
+                break;
+            }
+        }
     }
 }
