@@ -10,6 +10,7 @@ chrono = { version = "0.4.41", features = ["serde"] }
 chrono-humanize = "0.2.3"
 clap = { version = "4.5.40", features = ["derive"] }
 demand = "1.7.0"
+inline_colorization = "0.1.6"
 keyvalues-serde = "0.2.2"
 serde = { version = "1.0.219", features = ["derive"] }
 shellexpand = "3.1.1"

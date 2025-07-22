@@ -6,6 +6,7 @@ use chrono::Utc;
 use chrono_humanize::HumanTime;
 use clap::Parser;
 use init::{CyberToml, Init};
+use inline_colorization::*;
 use mod_manager::handler::{ModHandler, Move};
 
 mod args;
@@ -27,9 +28,18 @@ fn main() -> anyhow::Result<()> {
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
 
             for (mod_name, contents) in &toml.mods {
-                println!("* Name: `{mod_name}`");
-                println!("  - Enabled: {}", contents.installed);
-                println!("  - Version: {}", contents.version);
+                println!(
+                    "{style_bold}*{style_reset} {style_bold}{color_yellow}Name{style_reset}: `{mod_name}`"
+                );
+                println!(
+                    "  - Enabled: {}",
+                    if contents.installed {
+                        format!("{color_green}true{style_reset}")
+                    } else {
+                        format!("{color_red}false{style_reset}")
+                    }
+                );
+                println!("  - Version: {color_cyan}{}{style_reset}", contents.version);
                 if let Some(installed_at) = contents.installed_at {
                     println!(
                         "  - Installed: {}",
@@ -40,8 +50,20 @@ fn main() -> anyhow::Result<()> {
                 if !deps.is_empty() {
                     ret = 1;
                     println!("  - Missing dependencies:");
-                    for dep in deps {
-                        println!("      > `{dep}`");
+                    for dep in &deps {
+                        println!("      > `{color_red}{dep}{style_reset}`");
+                    }
+                }
+                if let Some(dependencies) = &contents.dependencies {
+                    let dependencies: Vec<_> = dependencies
+                        .iter()
+                        .filter(|dep| !deps.contains(dep))
+                        .collect();
+                    if !dependencies.is_empty() {
+                        println!("  - Dependencies:");
+                        for dep in dependencies {
+                            println!("      > `{dep}`");
+                        }
                     }
                 }
             }

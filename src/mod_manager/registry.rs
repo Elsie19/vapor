@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModRegistry {
     #[serde(default)]
-    pub mods: HashMap<String, ModEntry>,
+    pub mods: BTreeMap<String, ModEntry>,
 }
 
 #[derive(Debug, Default, Serialize, Deserialize, Clone)]
