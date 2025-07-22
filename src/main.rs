@@ -21,6 +21,7 @@ fn main() -> anyhow::Result<()> {
             cyber_directory.setup_cyber()?;
         }
         Command::Status => {
+            let mut ret = 0;
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
             let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
@@ -37,12 +38,15 @@ fn main() -> anyhow::Result<()> {
                 }
                 let deps = toml.satisfied_deps(mod_name);
                 if !deps.is_empty() {
+                    ret = 1;
                     println!("  - Missing dependencies:");
                     for dep in deps {
                         println!("      > `{dep}`");
                     }
                 }
             }
+
+            std::process::exit(ret);
         }
         Command::Add {
             file,
