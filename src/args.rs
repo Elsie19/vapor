@@ -28,7 +28,7 @@ pub enum Command {
         version: String,
 
         /// Dependencies.
-        #[arg(short, long)]
+        #[arg(short, long, value_delimiter = ',')]
         dependencies: Vec<String>,
     },
     /// Disable a mod.
