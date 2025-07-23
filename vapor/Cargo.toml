@@ -9,3 +9,4 @@ anyhow = "1.0.98"
 clap = { version = "4.5.40", features = ["derive"] }
 toml = { version = "0.9.2", features = ["serde"] }
 libvapor = { path = "../libvapor/" }
+miette = { version = "7.6.0", features = ["fancy"] }

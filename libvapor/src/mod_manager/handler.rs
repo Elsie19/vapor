@@ -6,6 +6,7 @@ use std::{
 };
 
 use chrono::Utc;
+use miette::Diagnostic;
 use thiserror::Error;
 use zip::ZipArchive;
 
@@ -26,9 +27,10 @@ impl Move {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Diagnostic, Debug)]
 pub enum ModError {
-    #[error("io error: `{0}`")]
+    #[error(transparent)]
+    #[diagnostic(code(ModHandler::add_mod))]
     Io(#[from] std::io::Error),
     #[error("deserialization error: `{0}`")]
     De(#[from] toml::de::Error),

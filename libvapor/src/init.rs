@@ -7,14 +7,16 @@ use std::{
 
 use chrono::{DateTime, Utc};
 use demand::Input;
+use miette::Diagnostic;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Diagnostic, Debug)]
 pub enum InitError {
     #[error("io error: `{0}`")]
     Io(#[from] std::io::Error),
     #[error("missing config at `{0}`")]
+    #[diagnostic(help("Vapor attempted to find this config file but failed"))]
     MissingConfig(PathBuf),
 }
 

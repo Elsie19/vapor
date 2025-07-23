@@ -4,19 +4,21 @@ use args::{Command, CyberArgs};
 use clap::Parser;
 use libvapor::init::{CyberToml, Init};
 use libvapor::mod_manager::handler::{ModHandler, Move};
+use miette::{IntoDiagnostic, LabeledSpan, Result, miette};
 
 mod args;
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     let cli = CyberArgs::parse();
 
     match cli.cmds {
         Command::Init => {
-            Init::new()?.setup_cyber()?;
+            Init::new()?.setup_cyber().into_diagnostic()?;
         }
         Command::Status { json } => {
             let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
+                .into_diagnostic()?;
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
 
             let (out, code) = toml.status(json);
@@ -32,14 +34,18 @@ fn main() -> anyhow::Result<()> {
             dependencies,
         } => {
             let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
+                .into_diagnostic()?;
             let handler = ModHandler::new(config.main.path.into());
 
-            handler.add_mod(&file, name, version, &dependencies)?;
+            handler.add_mod(&file, name.clone(), version, &dependencies)?;
+
+            println!("`{name}` is now active!");
         }
         ref at @ (Command::Disable { ref name } | Command::Enable { ref name }) => {
             let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
+                .into_diagnostic()?;
             let handler = ModHandler::new(config.main.path.into());
 
             let which = match at {
@@ -58,17 +64,39 @@ fn main() -> anyhow::Result<()> {
         }
         Command::List { name } => {
             let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
+                .into_diagnostic()?;
 
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
 
-            if let Some(mod_name) = toml.mods.get(&name) {
-                for file in &mod_name.files {
-                    println!("{file}");
+            match name {
+                Some(name) if !name.is_empty() => {
+                    if let Some(mod_name) = toml.mods.get(&name) {
+                        for file in &mod_name.files {
+                            println!("{file}");
+                        }
+                    } else {
+                        let source = format!("vapor list {name}");
+                        let report = miette!(
+                            labels = vec![LabeledSpan::at(
+                                source.len() - name.len()..source.len(),
+                                "invalid mod name"
+                            )],
+                            help = "Specify a valid mod found in `vapor list`!",
+                            "No mod named `{name}` found!"
+                        )
+                        .with_source_code(source);
+                        eprintln!("{report:?}");
+                        std::process::exit(1);
+                    }
                 }
-            } else {
-                eprintln!("No mod named `{name}` found");
-                std::process::exit(1);
+                _ => {
+                    for (mod_name, entry) in toml.mods {
+                        if entry.installed {
+                            println!("{mod_name}");
+                        }
+                    }
+                }
             }
         }
     }
