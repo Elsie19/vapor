@@ -13,15 +13,18 @@ fn main() -> anyhow::Result<()> {
 
     match cli.cmds {
         Command::Init => {
-            let cyber_directory = Init::get_path()?;
-            cyber_directory.setup_cyber()?;
+            Init::get_path()?.setup_cyber()?;
         }
         Command::Status { json } => {
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
             let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
 
-            std::process::exit(toml.status(json));
+            let (out, code) = toml.status(json);
+
+            print!("{out}");
+
+            std::process::exit(code);
         }
         Command::Add {
             file,
@@ -29,8 +32,10 @@ fn main() -> anyhow::Result<()> {
             version,
             dependencies,
         } => {
+            use std::str::FromStr;
+
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
-            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
             let handler = ModHandler::new(config.main.path.into());
 
             handler.add_mod(&file, name, version, &dependencies)?;
