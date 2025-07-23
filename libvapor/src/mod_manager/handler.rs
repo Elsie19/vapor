@@ -2,6 +2,7 @@ use std::{
     ffi::OsStr,
     fs::{self, File, OpenOptions},
     io::Write,
+    ops::Not,
     path::{Path, PathBuf},
 };
 
@@ -19,6 +20,27 @@ use super::{
 pub enum Move {
     Enable,
     Disable,
+}
+
+impl Not for Move {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        match self {
+            Move::Enable => Move::Disable,
+            Move::Disable => Move::Enable,
+        }
+    }
+}
+
+pub enum Operation {
+    /// Version.
+    Added(String),
+    Updated {
+        old: String,
+        new: String,
+    },
+    Move(Move),
 }
 
 impl Move {
@@ -78,7 +100,7 @@ impl ModHandler {
         name: S,
         version: S,
         dependencies: &[String],
-    ) -> Result<(), ModError> {
+    ) -> Result<Operation, ModError> {
         let name = name.into();
         let version = version.into();
 
@@ -106,10 +128,12 @@ impl ModHandler {
 
         archive.extract_unwrapped_root_dir(self.root.clone(), Self::root_dir_common_filter)?;
 
+        let old_version = toml.mods.get(&name).map(|entry| entry.version.clone());
+
         toml.mods.insert(
             name,
             ModEntry {
-                version,
+                version: version.clone(),
                 file: path.to_string_lossy().to_string(),
                 installed: true,
                 installed_at: Some(Utc::now()),
@@ -129,10 +153,23 @@ impl ModHandler {
 
         write!(&mut mods, "{}", toml::to_string_pretty(&toml)?)?;
 
-        Ok(())
+        if let Some(old_version) = old_version {
+            if old_version != version {
+                return Ok(Operation::Updated {
+                    old: old_version,
+                    new: version,
+                });
+            }
+        }
+
+        Ok(Operation::Added(version))
     }
 
-    pub fn move_mod<S: Into<String>>(&self, name: S, move_where: Move) -> Result<(), ModError> {
+    pub fn move_mod<S: Into<String>>(
+        &self,
+        name: S,
+        move_where: Move,
+    ) -> Result<Operation, ModError> {
         let name = name.into();
         let mut toml = self.load_toml()?;
 
@@ -181,7 +218,7 @@ impl ModHandler {
 
         write!(&mut mods, "{}", toml::to_string_pretty(&toml)?)?;
 
-        Ok(())
+        Ok(Operation::Move(!move_where))
     }
 
     pub fn load_toml(&self) -> Result<ModRegistry, ModError> {

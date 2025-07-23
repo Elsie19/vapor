@@ -3,7 +3,7 @@ use std::{fs, str::FromStr};
 use args::{Command, CyberArgs};
 use clap::Parser;
 use libvapor::init::{CyberToml, Init};
-use libvapor::mod_manager::handler::{ModHandler, Move};
+use libvapor::mod_manager::handler::{ModHandler, Move, Operation};
 use miette::{IntoDiagnostic, LabeledSpan, Result, miette};
 
 mod args;
@@ -38,9 +38,15 @@ fn main() -> Result<()> {
                 .into_diagnostic()?;
             let handler = ModHandler::new(config.main.path.into());
 
-            handler.add_mod(&file, name.clone(), version, &dependencies)?;
+            let change = handler.add_mod(&file, name.clone(), version, &dependencies)?;
 
-            println!("`{name}` is now active!");
+            match change {
+                Operation::Added(_) => println!("`{name}` is now active!"),
+                Operation::Updated { old, new } => {
+                    println!("Updated `{name}` from `{old}` ~> `{new}`")
+                }
+                Operation::Move(_) => unreachable!("Moving doesn't happen in `Add`"),
+            }
         }
         ref at @ (Command::Disable { ref name } | Command::Enable { ref name }) => {
             let config_path = Init::get_config()?;
@@ -53,14 +59,17 @@ fn main() -> Result<()> {
                 Command::Enable { .. } => Move::Enable,
                 _ => unreachable!("How"),
             };
-            handler.move_mod(name, which)?;
-            println!(
-                ":: {} `{name}`",
-                match which {
-                    Move::Enable => "Enabled",
-                    Move::Disable => "Disabled",
-                }
-            );
+            let change = handler.move_mod(name, which)?;
+            match change {
+                Operation::Move(moved) => println!(
+                    "{} `{name}`",
+                    match moved {
+                        Move::Enable => "Enabled",
+                        Move::Disable => "Disabled",
+                    }
+                ),
+                _ => unreachable!("Others not possible in disable or enable"),
+            }
         }
         Command::List { name } => {
             let config_path = Init::get_config()?;
