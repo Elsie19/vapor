@@ -2,13 +2,13 @@
 name = "libvapor"
 version = "0.1.0"
 edition = "2024"
+description = "Cyberpunk 2077 mod manager backend"
 
 [dependencies]
 chrono = { version = "0.4.41", features = ["serde"] }
 chrono-humanize = "0.2.3"
 demand = "1.7.0"
 inline_colorization = "0.1.6"
-keyvalues-serde = "0.2.2"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.141"
 shellexpand = "3.1.1"
