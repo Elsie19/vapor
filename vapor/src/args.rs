@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::{Parser, Subcommand};
 
+/// A Cyberpunk 2077 mod manager for Linux.
 #[derive(Parser, Debug)]
 pub struct CyberArgs {
     #[command(subcommand)]
@@ -32,6 +33,8 @@ pub enum Command {
         version: String,
 
         /// Dependencies.
+        ///
+        /// This should be passed by a comma (`,`) delimited list.
         #[arg(short, long, value_delimiter = ',')]
         dependencies: Vec<String>,
     },
