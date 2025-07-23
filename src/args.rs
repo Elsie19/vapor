@@ -10,7 +10,7 @@ pub struct CyberArgs {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Initialize `cyber`.
+    /// Initialize `vapor`.
     Init,
     /// Get status of mods.
     Status,

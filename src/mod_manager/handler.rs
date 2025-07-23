@@ -2,7 +2,7 @@ use std::{
     ffi::OsStr,
     fs::{self, File, OpenOptions},
     io::Write,
-    path::{Component, Path, PathBuf},
+    path::{Path, PathBuf},
 };
 
 use chrono::Utc;
