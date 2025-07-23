@@ -3,12 +3,10 @@ use std::fs;
 use anyhow::anyhow;
 use args::{Command, CyberArgs};
 use clap::Parser;
-use init::{CyberToml, Init};
-use mod_manager::handler::{ModHandler, Move};
+use libvapor::init::{CyberToml, Init};
+use libvapor::mod_manager::handler::{ModHandler, Move};
 
 mod args;
-mod init;
-mod mod_manager;
 
 fn main() -> anyhow::Result<()> {
     let cli = CyberArgs::parse();
