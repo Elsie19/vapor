@@ -14,14 +14,14 @@ use super::{
     registry::{ModEntry, ModRegistry},
 };
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Move {
     Enable,
     Disable,
 }
 
 impl Move {
-    pub const fn installed(&self) -> bool {
+    pub const fn installed(self) -> bool {
         matches!(self, Self::Enable)
     }
 }

@@ -13,7 +13,11 @@ pub enum Command {
     /// Initialize `vapor`.
     Init,
     /// Get status of mods.
-    Status,
+    Status {
+        /// JSON output.
+        #[arg(long)]
+        json: bool,
+    },
     /// Add a mod.
     Add {
         /// Path to mod archive.

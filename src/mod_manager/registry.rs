@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 
 use chrono::{DateTime, Utc};
+use chrono_humanize::HumanTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -17,6 +18,17 @@ pub struct ModEntry {
     pub installed_at: Option<DateTime<Utc>>,
     pub dependencies: Option<Vec<String>>,
     pub files: Vec<String>,
+}
+
+/// Used for output for [`ModRegistry::status`].
+#[derive(Serialize)]
+struct ModStatus<'a> {
+    name: &'a str,
+    enabled: bool,
+    version: &'a str,
+    installed_at: Option<String>,
+    missing_dependencies: Vec<String>,
+    dependencies: Vec<String>,
 }
 
 impl ModRegistry {
@@ -66,5 +78,79 @@ impl ModRegistry {
         }
 
         overlaps
+    }
+
+    pub fn status(&self, json: bool) -> i32 {
+        use inline_colorization::*;
+
+        let mut ret = 0;
+        let mut statuses = vec![];
+
+        for (mod_name, contents) in &self.mods {
+            let deps = self.satisfied_deps(mod_name);
+            let missing_dependencies = deps.clone();
+            let dependencies = contents
+                .dependencies
+                .clone()
+                .unwrap_or_default()
+                .into_iter()
+                .filter(|dep| !missing_dependencies.contains(dep))
+                .collect::<Vec<_>>();
+
+            if !missing_dependencies.is_empty() {
+                ret = 1;
+            }
+
+            if json {
+                statuses.push(ModStatus {
+                    name: mod_name,
+                    enabled: contents.installed,
+                    version: &contents.version,
+                    installed_at: contents.installed_at.map(|dt| dt.to_rfc3339()),
+                    missing_dependencies,
+                    dependencies,
+                });
+            } else {
+                println!(
+                    "{style_bold}*{style_reset} {style_bold}{color_yellow}Name{style_reset}: `{mod_name}`"
+                );
+                println!(
+                    "  - Enabled: {}",
+                    if contents.installed {
+                        format!("{color_green}true{style_reset}")
+                    } else {
+                        format!("{color_red}false{style_reset}")
+                    }
+                );
+                println!("  - Version: {color_cyan}{}{style_reset}", contents.version);
+                if let Some(installed_at) = contents.installed_at {
+                    println!(
+                        "  - Installed: {}",
+                        HumanTime::from(installed_at - Utc::now())
+                    );
+                }
+                if !deps.is_empty() {
+                    println!("  - Missing dependencies:");
+                    for dep in &deps {
+                        println!("      > `{color_red}{dep}{style_reset}`");
+                    }
+                }
+                if !dependencies.is_empty() {
+                    println!("  - Dependencies:");
+                    for dep in dependencies {
+                        println!("      > `{dep}`");
+                    }
+                }
+            }
+        }
+
+        if json {
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&statuses).expect("could not format json")
+            );
+        }
+
+        ret
     }
 }

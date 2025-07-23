@@ -88,7 +88,7 @@ impl Init {
         if let Some(paths) = tried_paths {
             let handle = File::open(paths)?;
             let platform: LibraryFolders = keyvalues_serde::from_reader(handle)?;
-            for (_, library_entry) in platform.0.into_iter() {
+            for (_, library_entry) in platform.0 {
                 suggestions.push(format!(
                     "{}/{}/{}",
                     library_entry.path, "steamapps", "common"
