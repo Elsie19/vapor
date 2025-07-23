@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::fmt::Write;
 
 use chrono::{DateTime, Utc};
 use chrono_humanize::HumanTime;
@@ -80,10 +81,11 @@ impl ModRegistry {
         overlaps
     }
 
-    pub fn status(&self, json: bool) -> i32 {
+    pub fn status(&self, json: bool) -> (String, i32) {
         use inline_colorization::*;
 
         let mut ret = 0;
+        let mut out = String::new();
         let mut statuses = vec![];
 
         for (mod_name, contents) in &self.mods {
@@ -111,10 +113,10 @@ impl ModRegistry {
                     dependencies,
                 });
             } else {
-                println!(
+                writeln!(&mut out,
                     "{style_bold}*{style_reset} {style_bold}{color_yellow}Name{style_reset}: `{mod_name}`"
                 );
-                println!(
+                writeln!(&mut out,
                     "  - Enabled: {}",
                     if contents.installed {
                         format!("{color_green}true{style_reset}")
@@ -122,35 +124,32 @@ impl ModRegistry {
                         format!("{color_red}false{style_reset}")
                     }
                 );
-                println!("  - Version: {color_cyan}{}{style_reset}", contents.version);
+                writeln!(&mut out, "  - Version: {color_cyan}{}{style_reset}", contents.version);
                 if let Some(installed_at) = contents.installed_at {
-                    println!(
+                    writeln!(&mut out,
                         "  - Installed: {}",
                         HumanTime::from(installed_at - Utc::now())
                     );
                 }
                 if !deps.is_empty() {
-                    println!("  - Missing dependencies:");
+                    writeln!(&mut out, "  - Missing dependencies:");
                     for dep in &deps {
-                        println!("      > `{color_red}{dep}{style_reset}`");
+                        writeln!(&mut out, "      > `{color_red}{dep}{style_reset}`");
                     }
                 }
                 if !dependencies.is_empty() {
-                    println!("  - Dependencies:");
+                    writeln!(&mut out, "  - Dependencies:");
                     for dep in dependencies {
-                        println!("      > `{dep}`");
+                        writeln!(&mut out, "      > `{dep}`");
                     }
                 }
             }
         }
 
         if json {
-            println!(
-                "{}",
-                serde_json::to_string_pretty(&statuses).expect("could not format json")
-            );
+            (serde_json::to_string_pretty(&statuses).expect("could not format json"), ret)
+        } else {
+            (out, ret)
         }
-
-        ret
     }
 }

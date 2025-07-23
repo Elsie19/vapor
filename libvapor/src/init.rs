@@ -2,6 +2,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 
 use chrono::{DateTime, Utc};
@@ -13,37 +14,42 @@ use thiserror::Error;
 pub enum InitError {
     #[error("io error: `{0}`")]
     Io(#[from] std::io::Error),
+    #[error("missing config at `{0}`")]
+    MissingConfig(PathBuf),
 }
 
+/// Main config file.
 #[derive(Serialize, Deserialize)]
 pub struct CyberToml {
     pub main: MainToml,
 }
 
+/// Inner contents of [`CyberToml`].
 #[derive(Serialize, Deserialize)]
 pub struct MainToml {
+    /// Path to `Cyberpunk 2077` directory.
     pub path: String,
+    /// Time created.
     pub created: DateTime<Utc>,
 }
 
+/// Create a new Vapor install.
 pub struct Init {
     pub path: PathBuf,
 }
 
-fn exists(path: &str) -> Result<(), &'static str> {
-    if Path::new(path).exists() {
-        Ok(())
-    } else {
-        Err("Path does not exist")
-    }
-}
-
 impl Init {
-    pub fn get_path() -> Result<Self, InitError> {
+    pub fn new() -> Result<Self, InitError> {
         let t = Input::new("Enter the path to your `Cyberpunk 2077` directory")
             .description("We will use this as a base directory for storing and managing mods.")
             .prompt("Path: ")
-            .validation(exists);
+            .validation(|path| {
+                if Path::new(path).exists() {
+                    Ok(())
+                } else {
+                    Err("Path does not exist")
+                }
+            });
 
         Ok(Self {
             path: PathBuf::from(t.run()?),
@@ -75,9 +81,21 @@ impl Init {
         Ok(())
     }
 
-    pub fn get_config() -> Option<PathBuf> {
+    pub fn get_config() -> Result<PathBuf, InitError> {
         let xdg_dirs = xdg::BaseDirectories::with_prefix("cyber");
 
-        xdg_dirs.get_config_file("Cyber.toml")
+        xdg_dirs
+            .get_config_file("Cyber.toml")
+            .ok_or(InitError::MissingConfig(
+                xdg_dirs.get_config_home().unwrap().join("Cyber.toml"),
+            ))
+    }
+}
+
+impl FromStr for CyberToml {
+    type Err = toml::de::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        toml::from_str(s)
     }
 }

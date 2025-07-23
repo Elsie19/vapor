@@ -1,6 +1,5 @@
-use std::fs;
+use std::{fs, str::FromStr};
 
-use anyhow::anyhow;
 use args::{Command, CyberArgs};
 use clap::Parser;
 use libvapor::init::{CyberToml, Init};
@@ -13,11 +12,11 @@ fn main() -> anyhow::Result<()> {
 
     match cli.cmds {
         Command::Init => {
-            Init::get_path()?.setup_cyber()?;
+            Init::new()?.setup_cyber()?;
         }
         Command::Status { json } => {
-            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
-            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config_path = Init::get_config()?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
 
             let (out, code) = toml.status(json);
@@ -32,17 +31,15 @@ fn main() -> anyhow::Result<()> {
             version,
             dependencies,
         } => {
-            use std::str::FromStr;
-
-            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
+            let config_path = Init::get_config()?;
             let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
             let handler = ModHandler::new(config.main.path.into());
 
             handler.add_mod(&file, name, version, &dependencies)?;
         }
         ref at @ (Command::Disable { ref name } | Command::Enable { ref name }) => {
-            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
-            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config_path = Init::get_config()?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
             let handler = ModHandler::new(config.main.path.into());
 
             let which = match at {
@@ -60,8 +57,8 @@ fn main() -> anyhow::Result<()> {
             );
         }
         Command::List { name } => {
-            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
-            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
+            let config_path = Init::get_config()?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path)?)?;
 
             let toml = ModHandler::new(config.main.path.into()).load_toml()?;
 
