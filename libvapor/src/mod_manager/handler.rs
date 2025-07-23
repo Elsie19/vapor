@@ -6,7 +6,7 @@ use std::{
 };
 
 use chrono::Utc;
-use miette::Diagnostic;
+use miette::{Diagnostic, NamedSource};
 use thiserror::Error;
 use zip::ZipArchive;
 
@@ -32,21 +32,29 @@ pub enum ModError {
     #[error(transparent)]
     #[diagnostic(code(ModHandler::add_mod))]
     Io(#[from] std::io::Error),
-    #[error("deserialization error: `{0}`")]
+    #[error("Deserialization error: `{0}`")]
     De(#[from] toml::de::Error),
-    #[error("serialization error: `{0}`")]
+    #[error("Serialization error: `{0}`")]
     Ser(#[from] toml::ser::Error),
-    #[error("missing mod: `{0}`")]
+    #[error("Missing mod: `{0}`")]
     MissingMod(String),
-    #[error("decompression issue: `{0}`")]
+    #[error("Decompression issue: `{0}`")]
     ZipArchive(#[from] zip::result::ZipError),
-    #[error(
-        "files from `{incoming}` are attempting to write to:\n{file_listing}", file_listing = .files.iter().map(|(owned, file)| format!("{owned} | {file}")).collect::<Vec<_>>().join("\n")
-    )]
-    DoubleOwnedFiles {
-        incoming: String,
-        files: Vec<(String, String)>,
-    },
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    DoubleOwnedFiles(#[from] DoubleOwnedFiles),
+}
+
+#[derive(Debug, Diagnostic, Error)]
+#[error("Files from `{incoming}` already exist in mod directory")]
+#[diagnostic(help("Ensure that mods are not trying to overwrite others."))]
+pub struct DoubleOwnedFiles {
+    incoming: String,
+    #[source_code]
+    files: NamedSource<String>,
+    raw_splits: Vec<(String, String)>,
+    #[label = "Files(s) listed here are already owned by another mod"]
+    span: std::ops::Range<usize>,
 }
 
 pub struct ModHandler {
@@ -60,6 +68,13 @@ impl ModHandler {
             root: root.clone(),
             toml: root.join("mods.toml"),
         }
+    }
+
+    fn term_link(&self, file: &str) -> String {
+        let full_path = self.root.join(file);
+        let path_str = full_path.to_string_lossy();
+        let url = format!("file://{path_str}");
+        format!("\x1b]8;;{url}\x1b\\{file}\x1b]8;;\x1b\\")
     }
 
     pub fn add_mod<S: Into<String>>(
@@ -80,10 +95,18 @@ impl ModHandler {
 
         let crossed_paths = toml.crossover_paths(&name, files);
         if !crossed_paths.is_empty() {
-            return Err(ModError::DoubleOwnedFiles {
+            let text = crossed_paths
+                .iter()
+                .map(|(owned, file)| format!("{owned} | {}", self.term_link(file)))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let span = 0..text.len();
+            return Err(ModError::from(DoubleOwnedFiles {
+                raw_splits: crossed_paths,
                 incoming: name,
-                files: crossed_paths,
-            });
+                files: NamedSource::new("conflicting files", text),
+                span,
+            }));
         }
 
         archive.extract_unwrapped_root_dir(self.root.clone(), Self::root_dir_common_filter)?;
