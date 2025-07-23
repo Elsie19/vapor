@@ -28,6 +28,8 @@ You can verify that your mod is installed by running:
 vapor status
 ```
 
+You can also pass the `--json` flag to `status` for a JSON representation.
+
 ### Disabling Mods
 
 To disable a given mod, run:
@@ -37,6 +39,14 @@ vapor disable "mod name"
 ```
 
 To reenable, swap `disable` for `enable`.
+
+### Installed files
+
+To list the files tracked by Vapor for a given mod, run:
+
+```bash
+vapor list "mod name"
+```
 
 ## Other
 
