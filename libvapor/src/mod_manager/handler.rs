@@ -40,21 +40,16 @@ pub enum ModError {
     MissingMod(String),
     #[error("Decompression issue: `{0}`")]
     ZipArchive(#[from] zip::result::ZipError),
-    #[error(transparent)]
-    #[diagnostic(transparent)]
-    DoubleOwnedFiles(#[from] DoubleOwnedFiles),
-}
-
-#[derive(Debug, Diagnostic, Error)]
-#[error("Files from `{incoming}` already exist in mod directory")]
-#[diagnostic(help("Ensure that mods are not trying to overwrite others."))]
-pub struct DoubleOwnedFiles {
-    incoming: String,
-    #[source_code]
-    files: NamedSource<String>,
-    raw_splits: Vec<(String, String)>,
-    #[label = "Files(s) listed here are already owned by another mod"]
-    span: std::ops::Range<usize>,
+    #[error("Files from `{incoming}` already exist in mod directory")]
+    #[diagnostic(help("Ensure that mods are not trying to overwrite others."))]
+    DoubleOwnedFiles {
+        incoming: String,
+        #[source_code]
+        files: NamedSource<String>,
+        raw_splits: Vec<(String, String)>,
+        #[label = "Files(s) listed here are already owned by another mod"]
+        span: std::ops::Range<usize>,
+    },
 }
 
 pub struct ModHandler {
@@ -101,12 +96,12 @@ impl ModHandler {
                 .collect::<Vec<_>>()
                 .join("\n");
             let span = 0..text.len();
-            return Err(ModError::from(DoubleOwnedFiles {
+            return Err(ModError::DoubleOwnedFiles {
                 raw_splits: crossed_paths,
                 incoming: name,
                 files: NamedSource::new("conflicting files", text),
                 span,
-            }));
+            });
         }
 
         archive.extract_unwrapped_root_dir(self.root.clone(), Self::root_dir_common_filter)?;
