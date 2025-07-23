@@ -2,7 +2,9 @@
 
 > A Cyberpunk 2077 CLI mod manager for Linux.
 
-## Getting Started
+## Usage
+
+### Getting Started
 
 Download the binary (TBD) and run:
 
@@ -12,7 +14,7 @@ vapor init
 
 It will ask you for the directory to your `Cyberpunk 2077` directory.
 
-## Adding Mods
+### Adding Mods
 
 Download any mod file and run:
 
@@ -26,7 +28,7 @@ You can verify that your mod is installed by running:
 vapor status
 ```
 
-## Disabling Mods
+### Disabling Mods
 
 To disable a given mod, run:
 
@@ -35,3 +37,7 @@ vapor disable "mod name"
 ```
 
 To reenable, swap `disable` for `enable`.
+
+## Other
+
+Vapor is meant to be pretty low level. It will not automatically resolve nor detect version breakage or dependencies. You are encouraged to build other tools on top of Vapor that can add these features.
