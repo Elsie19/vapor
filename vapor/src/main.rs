@@ -108,6 +108,15 @@ fn main() -> Result<()> {
                 }
             }
         }
+        Command::Graph => {
+            let config_path = Init::get_config()?;
+            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
+                .into_diagnostic()?;
+
+            let toml = ModHandler::new(config.main.path.into()).load_toml()?;
+
+            print!("{}", toml.graph());
+        }
     }
 
     Ok(())

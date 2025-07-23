@@ -1,8 +1,11 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fmt::Write;
+use std::io::Cursor;
 
 use chrono::{DateTime, Utc};
 use chrono_humanize::HumanTime;
+use inline_colorization::*;
+use ptree::{TreeBuilder, write_tree};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -81,6 +84,7 @@ impl ModRegistry {
         overlaps
     }
 
+    #[allow(unused_must_use)]
     pub fn status(&self, json: bool) -> (String, i32) {
         use inline_colorization::*;
 
@@ -113,10 +117,12 @@ impl ModRegistry {
                     dependencies,
                 });
             } else {
-                writeln!(&mut out,
+                writeln!(
+                    &mut out,
                     "{style_bold}*{style_reset} {style_bold}{color_yellow}Name{style_reset}: `{mod_name}`"
                 );
-                writeln!(&mut out,
+                writeln!(
+                    &mut out,
                     "  - Enabled: {}",
                     if contents.installed {
                         format!("{color_green}true{style_reset}")
@@ -124,9 +130,14 @@ impl ModRegistry {
                         format!("{color_red}false{style_reset}")
                     }
                 );
-                writeln!(&mut out, "  - Version: {color_cyan}{}{style_reset}", contents.version);
+                writeln!(
+                    &mut out,
+                    "  - Version: {color_cyan}{}{style_reset}",
+                    contents.version
+                );
                 if let Some(installed_at) = contents.installed_at {
-                    writeln!(&mut out,
+                    writeln!(
+                        &mut out,
                         "  - Installed: {}",
                         HumanTime::from(installed_at - Utc::now())
                     );
@@ -147,9 +158,69 @@ impl ModRegistry {
         }
 
         if json {
-            (serde_json::to_string_pretty(&statuses).expect("could not format json"), ret)
+            (
+                serde_json::to_string_pretty(&statuses).expect("could not format json"),
+                ret,
+            )
         } else {
             (out, ret)
+        }
+    }
+
+    pub fn graph(&self) -> String {
+        let mut out = String::new();
+        for (mod_name, entry) in &self.mods {
+            let mut seen = HashSet::new();
+            let mut builder = TreeBuilder::new(format!(
+                "* {style_bold}{mod_name}{style_reset} v{}",
+                entry.version
+            ));
+            Self::build_tree(mod_name, &self.mods, &mut builder, &mut seen);
+            let tree = builder.build();
+
+            let mut buffer = Cursor::new(Vec::new());
+            let _ = write_tree(&tree, &mut buffer);
+
+            out.push_str(&String::from_utf8(buffer.into_inner()).unwrap());
+            out.push('\n');
+        }
+
+        out
+    }
+
+    fn build_tree(
+        mod_name: &str,
+        map: &BTreeMap<String, ModEntry>,
+        builder: &mut TreeBuilder,
+        seen: &mut HashSet<String>,
+    ) {
+        if !seen.insert(mod_name.to_string()) {
+            return;
+        }
+
+        if let Some(entry) = map.get(mod_name) {
+            let deps = entry.dependencies.as_deref().unwrap_or(&[]);
+
+            for dep in deps {
+                if let Some(dep_entry) = map.get(dep) {
+                    builder.begin_child(format!(
+                        "{style_bold}{color_green}✔{style_reset} {style_bold}{dep}{style_reset} v{}",
+                        dep_entry.version
+                    ));
+                    Self::build_tree(dep, map, builder, seen);
+                    builder.end_child();
+                } else {
+                    builder
+                        .begin_child(format!(
+                            "{style_bold}{color_red}✘{style_reset} {style_bold}{dep}{style_reset}"
+                        ))
+                        .end_child();
+                }
+            }
+        } else {
+            builder
+                .begin_child(format!("{style_bold}{color_red}✘{style_reset} {mod_name}"))
+                .end_child();
         }
     }
 }

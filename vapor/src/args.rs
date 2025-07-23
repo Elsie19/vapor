@@ -53,4 +53,6 @@ pub enum Command {
         /// Mod name.
         name: Option<String>,
     },
+    /// Get a graph of mods installed.
+    Graph,
 }
