@@ -176,10 +176,9 @@ impl ModRegistry {
                 entry.version
             ));
             Self::build_tree(mod_name, &self.mods, &mut builder, &mut seen);
-            let tree = builder.build();
 
             let mut buffer = Cursor::new(Vec::new());
-            let _ = write_tree(&tree, &mut buffer);
+            let _ = write_tree(&builder.build(), &mut buffer);
 
             out.push_str(&String::from_utf8(buffer.into_inner()).unwrap());
             out.push('\n');
@@ -199,16 +198,33 @@ impl ModRegistry {
         }
 
         if let Some(entry) = map.get(mod_name) {
+            if !entry.installed {
+                builder
+                .begin_child(format!(
+                    "{style_bold}{color_yellow}⚠{style_reset} {style_bold}{mod_name}{style_reset} (disabled)"
+                ))
+                .end_child();
+                return;
+            }
+
             let deps = entry.dependencies.as_deref().unwrap_or(&[]);
 
             for dep in deps {
                 if let Some(dep_entry) = map.get(dep) {
-                    builder.begin_child(format!(
+                    if !dep_entry.installed {
+                        builder.begin_child(format!(
+                        "{style_bold}{color_yellow}⚠{style_reset} {style_bold}{dep}{style_reset} v{} (disabled)",
+                        dep_entry.version
+                    ));
+                        builder.end_child();
+                    } else {
+                        builder.begin_child(format!(
                         "{style_bold}{color_green}✔{style_reset} {style_bold}{dep}{style_reset} v{}",
                         dep_entry.version
                     ));
-                    Self::build_tree(dep, map, builder, seen);
-                    builder.end_child();
+                        Self::build_tree(dep, map, builder, seen);
+                        builder.end_child();
+                    }
                 } else {
                     builder
                         .begin_child(format!(

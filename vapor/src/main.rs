@@ -64,8 +64,8 @@ fn main() -> Result<()> {
                 Operation::Move(moved) => println!(
                     "{} `{name}`",
                     match moved {
-                        Move::Enable => "Enabled",
-                        Move::Disable => "Disabled",
+                        Move::Enable => "Disabled",
+                        Move::Disable => "Enabled",
                     }
                 ),
                 _ => unreachable!("Others not possible in disable or enable"),
