@@ -37,21 +37,24 @@ fn main() -> anyhow::Result<()> {
 
             handler.add_mod(&file, name, version, &dependencies)?;
         }
-        Command::Disable { name } => {
+        ref at @ (Command::Disable { ref name } | Command::Enable { ref name }) => {
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
             let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
             let handler = ModHandler::new(config.main.path.into());
 
-            handler.move_mod(&name, Move::Disable)?;
-            println!(":: Disabled `{name}`");
-        }
-        Command::Enable { name } => {
-            let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
-            let config: CyberToml = toml::from_str(&fs::read_to_string(&config_path)?)?;
-            let handler = ModHandler::new(config.main.path.into());
-
-            handler.move_mod(&name, Move::Enable)?;
-            println!(":: Enabled `{name}`");
+            let which = match at {
+                Command::Disable { .. } => Move::Disable,
+                Command::Enable { .. } => Move::Enable,
+                _ => unreachable!("How"),
+            };
+            handler.move_mod(name, which)?;
+            println!(
+                ":: {} `{name}`",
+                match which {
+                    Move::Enable => "Enabled",
+                    Move::Disable => "Disabled",
+                }
+            );
         }
         Command::List { name } => {
             let config_path = Init::get_config().ok_or(anyhow!("Cannot get config file"))?;
