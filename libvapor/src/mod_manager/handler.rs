@@ -3,7 +3,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::Write,
     ops::Not,
-    path::{Path, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
 use chrono::Utc;
@@ -15,6 +15,8 @@ use super::{
     mod_file_formats::read_files,
     registry::{ModEntry, ModRegistry},
 };
+
+const VALID_ROOT_DIRS: &[&str] = &["r6", "archive", "bin", "red4ext", "engine"];
 
 #[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Move {
@@ -72,6 +74,18 @@ pub enum ModError {
         #[label = "Files(s) listed here are already owned by another mod"]
         span: std::ops::Range<usize>,
     },
+    #[error("Extraction incomplete")]
+    #[diagnostic(code(ModHandler::add_mod))]
+    ExtractionIncomplete {
+        #[source_code]
+        files: NamedSource<String>,
+        raw_splits: Vec<PathBuf>,
+        #[label = "Files(s) listed here are could not be found after extraction"]
+        span: std::ops::Range<usize>,
+    },
+    #[error("Missing file in dry-run: `{mod_name}` does not have `{path}`")]
+    #[diagnostic(code(ModHandler::add_mod))]
+    MissingFile { mod_name: String, path: String },
 }
 
 pub struct ModHandler {
@@ -110,7 +124,7 @@ impl ModHandler {
 
         let files = read_files(path);
 
-        let crossed_paths = toml.crossover_paths(&name, files);
+        let crossed_paths = toml.crossover_paths(&name, files.clone());
         if !crossed_paths.is_empty() {
             let text = crossed_paths
                 .iter()
@@ -126,7 +140,25 @@ impl ModHandler {
             });
         }
 
-        archive.extract_unwrapped_root_dir(self.root.clone(), Self::root_dir_common_filter)?;
+        archive.extract(self.root.clone())?;
+
+        let extracted_files = files.iter().map(|f| self.root.join(f)).collect::<Vec<_>>();
+
+        let missing: Vec<_> = extracted_files.iter().filter(|p| !p.exists()).collect();
+
+        if !missing.is_empty() {
+            let text = missing
+                .iter()
+                .map(|file| self.term_link(file.to_str().unwrap()))
+                .collect::<Vec<_>>()
+                .join("\n");
+            let span = 0..text.len();
+            return Err(ModError::ExtractionIncomplete {
+                raw_splits: missing.into_iter().cloned().collect(),
+                files: NamedSource::new("missing files", text),
+                span,
+            });
+        }
 
         let old_version = toml.mods.get(&name).map(|entry| entry.version.clone());
 
@@ -195,6 +227,13 @@ impl ModHandler {
 
         for file in &entry.files {
             let from = old_root.join(file);
+            if !from.exists() {
+                return Err(ModError::MissingFile {
+                    mod_name: name,
+                    path: file.to_owned(),
+                });
+            }
+
             let to = new_root.join(file);
 
             if let Some(parent) = to.parent() {
@@ -227,32 +266,30 @@ impl ModHandler {
         Ok(toml::from_str(&toml_string)?)
     }
 
-    fn clean_upwards(start: &Path, stop: &Path) {
-        let mut dir = start;
-
-        while dir != stop {
-            if fs::remove_dir(dir).is_err() {
-                break;
+    fn clean_upwards(mut path: &Path, stop: &Path) {
+        while path.starts_with(stop) && path != stop {
+            if let Some(name) = path.file_name() {
+                if VALID_ROOT_DIRS.contains(&name.to_str().unwrap()) {
+                    break;
+                }
             }
 
-            if let Some(parent) = dir.parent() {
-                dir = parent;
-            } else {
-                break;
+            match fs::remove_dir(path) {
+                Ok(()) => {}
+                Err(_) => break,
             }
+
+            path = path.parent().unwrap();
         }
     }
 
     fn root_dir_common_filter(path: &Path) -> bool {
-        const VALID_ROOT_DIRS: &[&str] = &["r6", "archive", "bin", "red4ext", "engine"];
-
-        // Accept only if it's exactly one of the valid root dir names
-        if path.components().count() == 1 {
-            if let Some(dir_name) = path.file_name() {
-                return VALID_ROOT_DIRS
-                    .iter()
-                    .any(|&valid| OsStr::new(valid) == dir_name);
-            }
+        if let Some(first) = path.components().next()
+            && let Component::Normal(name) = first
+        {
+            return VALID_ROOT_DIRS
+                .iter()
+                .any(|&valid| OsStr::new(valid) == name);
         }
 
         false
