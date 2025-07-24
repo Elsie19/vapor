@@ -19,7 +19,7 @@ It will ask you for the directory to your `Cyberpunk 2077` directory.
 Download any mod file and run:
 
 ```bash
-vapor add <path to file> --name "mod name" --version "mod version" --dependencies "mod,dependencies,comma,separated,if,applicable"
+vapor add "path/to/mod.zip" --name "mod name" --version "mod version" --dependencies "mod,dependencies,comma,separated,if,applicable"
 ```
 
 You can verify that your mod is installed by running:
@@ -46,6 +46,18 @@ To list the files tracked by Vapor for a given mod, run:
 
 ```bash
 vapor list "mod name"
+```
+
+To list all installed mods, run:
+
+```bash
+vapor list
+```
+
+And finally, to see a graph tree of your mods, run:
+
+```bash
+vapor graph
 ```
 
 ## Other
