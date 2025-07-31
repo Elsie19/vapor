@@ -1,6 +1,6 @@
 use std::{fs::File, path::Path};
 
-use zip::ZipArchive;
+use compress_tools::list_archive_files;
 
 pub fn read_files<P: AsRef<Path>>(file: P) -> Vec<String> {
     let mut paths = vec![];
@@ -8,14 +8,13 @@ pub fn read_files<P: AsRef<Path>>(file: P) -> Vec<String> {
         return paths;
     };
 
-    let Some(mut archive) = ZipArchive::new(file).ok() else {
+    let Ok(archive) = list_archive_files(file) else {
         return paths;
     };
 
-    for i in 0..archive.len() {
-        let file = archive.by_index(i).expect("Oops");
-        if !file.is_dir() {
-            paths.push(file.name().to_string());
+    for path in archive {
+        if !path.ends_with('/') {
+            paths.push(path);
         }
     }
 
