@@ -7,9 +7,9 @@ use std::{
 };
 
 use chrono::Utc;
+use compress_tools::{Ownership, uncompress_archive};
 use miette::{Diagnostic, NamedSource};
 use thiserror::Error;
-use zip::ZipArchive;
 
 use super::{
     mod_file_formats::read_files,
@@ -63,7 +63,7 @@ pub enum ModError {
     #[error("Missing mod: `{0}`")]
     MissingMod(String),
     #[error("Decompression issue: `{0}`")]
-    ZipArchive(#[from] zip::result::ZipError),
+    Archive(#[from] compress_tools::Error),
     #[error("Files from `{incoming}` already exist in mod directory")]
     #[diagnostic(help("Ensure that mods are not trying to overwrite others."))]
     DoubleOwnedFiles {
@@ -120,7 +120,7 @@ impl ModHandler {
 
         let mut toml = self.load_toml()?;
 
-        let mut archive = ZipArchive::new(File::open(path)?).expect("Could not read zip file");
+        let mut archive = File::open(path)?;
 
         let files = read_files(path);
 
@@ -140,7 +140,7 @@ impl ModHandler {
             });
         }
 
-        archive.extract(self.root.clone())?;
+        uncompress_archive(&mut archive, &self.root, Ownership::Preserve)?;
 
         let extracted_files = files.iter().map(|f| self.root.join(f)).collect::<Vec<_>>();
 
