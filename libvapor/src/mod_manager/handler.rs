@@ -94,7 +94,8 @@ pub struct ModHandler {
 }
 
 impl ModHandler {
-    pub fn new(root: PathBuf) -> Self {
+    pub fn new<T: Into<PathBuf>>(root: T) -> Self {
+        let root = root.into();
         Self {
             root: root.clone(),
             toml: root.join("mods.toml"),

@@ -8,6 +8,11 @@ use miette::{IntoDiagnostic, LabeledSpan, Result, miette};
 
 mod args;
 
+fn load_config() -> Result<CyberToml> {
+    let config_path = Init::get_config()?;
+    CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?).into_diagnostic()
+}
+
 fn main() -> Result<()> {
     let cli = CyberArgs::parse();
 
@@ -16,11 +21,8 @@ fn main() -> Result<()> {
             Init::new()?.setup_cyber().into_diagnostic()?;
         }
         Command::Status { json } => {
-            let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
-                .into_diagnostic()?;
-            let toml = ModHandler::new(config.main.path.into()).load_toml()?;
-
+            let config = load_config()?;
+            let toml = ModHandler::new(config.main.path).load_toml()?;
             let (out, code) = toml.status(json);
 
             print!("{out}");
@@ -33,11 +35,8 @@ fn main() -> Result<()> {
             version,
             dependencies,
         } => {
-            let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
-                .into_diagnostic()?;
-            let handler = ModHandler::new(config.main.path.into());
-
+            let config = load_config()?;
+            let handler = ModHandler::new(config.main.path);
             let change = handler.add_mod(&file, name.clone(), version, &dependencies)?;
 
             match change {
@@ -49,10 +48,8 @@ fn main() -> Result<()> {
             }
         }
         ref at @ (Command::Disable { ref name } | Command::Enable { ref name }) => {
-            let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
-                .into_diagnostic()?;
-            let handler = ModHandler::new(config.main.path.into());
+            let config = load_config()?;
+            let handler = ModHandler::new(config.main.path);
 
             let which = match at {
                 Command::Disable { .. } => Move::Disable,
@@ -72,11 +69,8 @@ fn main() -> Result<()> {
             }
         }
         Command::List { name } => {
-            let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
-                .into_diagnostic()?;
-
-            let toml = ModHandler::new(config.main.path.into()).load_toml()?;
+            let config = load_config()?;
+            let toml = ModHandler::new(config.main.path).load_toml()?;
 
             match name {
                 Some(name) if !name.is_empty() => {
@@ -109,12 +103,8 @@ fn main() -> Result<()> {
             }
         }
         Command::Graph => {
-            let config_path = Init::get_config()?;
-            let config = CyberToml::from_str(&fs::read_to_string(&config_path).into_diagnostic()?)
-                .into_diagnostic()?;
-
-            let toml = ModHandler::new(config.main.path.into()).load_toml()?;
-
+            let config = load_config()?;
+            let toml = ModHandler::new(config.main.path).load_toml()?;
             print!("{}", toml.graph());
         }
     }

@@ -39,7 +39,7 @@ impl ModRegistry {
     /// Check if dependencies are satisfied.
     ///
     /// Returns a list of dependencies that could not be found.
-    pub fn satisfied_deps<S: Into<String>>(&self, name: S) -> Vec<String> {
+    pub fn unsatisfied_deps<S: Into<String>>(&self, name: S) -> Vec<String> {
         let name = name.into();
         let mut broken_deps = vec![];
 
@@ -93,17 +93,16 @@ impl ModRegistry {
         let mut statuses = vec![];
 
         for (mod_name, contents) in &self.mods {
-            let deps = self.satisfied_deps(mod_name);
-            let missing_dependencies = deps.clone();
-            let dependencies = contents
+            let deps: HashSet<_> = self.unsatisfied_deps(mod_name).into_iter().collect();
+            let dependencies: Vec<_> = contents
                 .dependencies
-                .clone()
-                .unwrap_or_default()
-                .into_iter()
-                .filter(|dep| !missing_dependencies.contains(dep))
-                .collect::<Vec<_>>();
+                .iter()
+                .flat_map(|deps| deps.iter())
+                .filter(|dep| !deps.contains(*dep))
+                .cloned()
+                .collect();
 
-            if !missing_dependencies.is_empty() {
+            if !deps.is_empty() {
                 ret = 1;
             }
 
@@ -113,7 +112,7 @@ impl ModRegistry {
                     enabled: contents.installed,
                     version: &contents.version,
                     installed_at: contents.installed_at.map(|dt| dt.to_rfc3339()),
-                    missing_dependencies,
+                    missing_dependencies: deps.into_iter().collect(),
                     dependencies,
                 });
             } else {
