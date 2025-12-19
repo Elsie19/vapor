@@ -62,4 +62,4 @@ vapor graph
 
 ## Other
 
-Vapor is meant to be pretty low level. It will not automatically resolve nor detect version breakage or dependencies. Many operations such as adding dependencies and resolving version errors should be done manually! You are encouraged to build other tools on top of Vapor that can add these features.
+Vapor is meant to be pretty low level. It will not automatically resolve nor detect version breakage or dependencies. Many operations such as handling broken dependencies and resolving version errors should be done manually! You are encouraged to build other tools on top of Vapor that can add these features.

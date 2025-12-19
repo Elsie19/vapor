@@ -59,8 +59,8 @@ impl Init {
     }
 
     pub fn setup_cyber(&self) -> Result<(), std::io::Error> {
-        let xdg_dirs = xdg::BaseDirectories::with_prefix("cyber");
-        let config_path = xdg_dirs.place_config_file("Cyber.toml")?;
+        let xdg_dirs = xdg::BaseDirectories::with_prefix("vapor");
+        let config_path = xdg_dirs.place_config_file("Vapor.toml")?;
 
         let mut config_file = File::create_new(config_path)?;
 
@@ -84,12 +84,12 @@ impl Init {
     }
 
     pub fn get_config() -> Result<PathBuf, InitError> {
-        let xdg_dirs = xdg::BaseDirectories::with_prefix("cyber");
+        let xdg_dirs = xdg::BaseDirectories::with_prefix("vapor");
 
         xdg_dirs
-            .get_config_file("Cyber.toml")
+            .get_config_file("Vapor.toml")
             .ok_or(InitError::MissingConfig(
-                xdg_dirs.get_config_home().unwrap().join("Cyber.toml"),
+                xdg_dirs.get_config_home().unwrap().join("Vapor.toml"),
             ))
     }
 }
